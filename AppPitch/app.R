@@ -1,36 +1,64 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    https://shiny.posit.co/
-#
-
 library(shiny)
+library(tidyverse)
+library(ggplot2)
+library(dataRetrieval)
 
-# Define UI for application that draws a histogram
+# Define UI 
 ui <- fluidPage(
 
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
+# Application title
+titlePanel("Nooksack River Profile"),
 
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
+# Sidebar layout
+sidebarLayout(
+  
+  # Sidebar panel
+  sidebarPanel(
+    
+    checkboxGroupInput(
+      inputId = "my_checkbox_group",
+      label = "Choose your stream gauges:",
+      choices = list(
+        "USGS-12213100 (Ferndale)" = "A",
+        "USGS-12211200 (Everson)" = "B",
+        "USGS-12210700 (North Cedarville)" = "C",
+        "USGS-12210000 (South Fork)" = "D",
+        "USGS-1220800 (Middle Fork)" = "E",
+        "USGS-12205000 (North Fork)" = "F"
+      ),
+      selected = "A"
+    ),
+    
+    selectInput(
+      inputId = "variable",
+      label = "Choose a variable to plot:",
+      choices = c(
+        "Gauge Height" = "height",
+        "Discharge" = "Q",
+        "Turbidity" = "turb"
+      )
+    ),
+    
+    dateRangeInput(
+      inputId = "date_range",
+      label = "Select Date Range:",
+      start = Sys.Date() - 7,
+      end = Sys.Date()
     )
+    
+    # textOutput("selected_range")
+    
+  ),
+  
+  # Main panel
+  mainPanel(
+    plotOutput("my_plot")
+  )
+  
 )
+)
+
+
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
