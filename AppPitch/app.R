@@ -16,64 +16,96 @@ sidebarLayout(
   sidebarPanel(
     
     checkboxGroupInput(
-      inputId = "my_checkbox_group",
+      inputId = "gauges",
       label = "Choose your stream gauges:",
       choices = list(
-        "USGS-12213100 (Ferndale)" = "A",
-        "USGS-12211200 (Everson)" = "B",
-        "USGS-12210700 (North Cedarville)" = "C",
-        "USGS-12210000 (South Fork)" = "D",
-        "USGS-1220800 (Middle Fork)" = "E",
-        "USGS-12205000 (North Fork)" = "F"
+        "USGS-12213100 (Ferndale)" = "USGS-12213100",
+        "USGS-12211200 (Everson)" = "USGS-12211200",
+        "USGS-12210700 (North Cedarville)" = "USGS-12210700",
+        "USGS-12210000 (South Fork)" = "USGS-12210000",
+        "USGS-12208000 (Middle Fork)" = "USGS-12208000",
+        "USGS-12205000 (North Fork)" = "USGS-12205000"
       ),
-      selected = "A"
+      selected = "USGS-12213100"
     ),
     
     selectInput(
-      inputId = "variable",
+      inputId = "parameter",
       label = "Choose a variable to plot:",
       choices = c(
-        "Gauge Height" = "height",
-        "Discharge" = "Q",
-        "Turbidity" = "turb"
+        "Gauge Height" = "00065",
+        "Discharge" = "00060",
+        "Turbidity" = "63680"
       )
     ),
     
     dateRangeInput(
       inputId = "date_range",
-      label = "Select Date Range:",
-      start = Sys.Date() - 7,
+      label = "Date Range:",
+      start = "1990-10-01",
       end = Sys.Date()
     )
     
-    # textOutput("selected_range")
     
   ),
   
   # Main panel
   mainPanel(
-    plotOutput("my_plot")
+    plotOutput("my_plot"),
+    )
   )
-  
 )
-)
-
-
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white',
-             xlab = 'Waiting time to next eruption (in mins)',
-             main = 'Histogram of waiting times')
-    })
+  # reactive to get the data
+  water_data <- reactive({
+    req(input$gauges, input$date_range, input$parameter) # inputs
+    
+    # daily values retrieval
+    read_waterdata_daily(
+      monitoring_location_id = input$gauges,
+      parameter_code = input$parameter,
+      time = c(input$date_range[1], input$date_range[2]),
+    )
+  })
+  
+  parameter_labels <- c(
+    "00060" = "Discharge (cfs)",
+    "00065" = "Gauge Height (ft)",
+    "63680" = "Turbidity (FNU)"
+  )
+  
+  # Plot
+  output$my_plot <- renderPlot({
+    
+    df <- water_data()
+    
+    # identify value column
+    value_col <- "value"
+    
+    ggplot(
+      df,
+      aes(
+        x = time,
+        y = .data[[value_col]],
+        color = monitoring_location_id
+      )
+    ) +
+      geom_line(linewidth = 1) +
+      labs(
+        x = "Date",
+        y = parameter_labels[input$parameter],
+        color = "Gauge"
+      ) +
+      theme_bw()
+    
+  })
+    
 }
+
+  
+
 
 # Run the application 
 shinyApp(ui = ui, server = server)
