@@ -73,7 +73,7 @@ server <- function(input, output) {
   parameter_labels <- c(
     "00060" = "Discharge (cfs)",
     "00065" = "Gauge Height (ft)",
-    "63680" = "Turbidity (FNU)"
+    "63680" = "Turbidity (NTU)"
   )
   
   # Plot
