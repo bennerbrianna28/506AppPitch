@@ -47,7 +47,7 @@ sidebarLayout(
     #)
   
   sliderInput("dateSlider",
-              "Dates:",
+              "Choose your start dates:",
               min = as.Date("1990-10-01","%Y-%m-%d"),
               max = as.Date("2026-09-30","%Y-%m-%d"),
               value=as.Date("1990-10-01"),
