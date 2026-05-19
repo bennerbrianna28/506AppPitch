@@ -39,12 +39,19 @@ sidebarLayout(
       )
     ),
     
-    dateRangeInput(
-      inputId = "date_range",
-      label = "Date Range:",
-      start = "1990-10-01",
-      end = Sys.Date()
-    )
+    #dateRangeInput(
+      #inputId = "date_range",
+      #label = "Date Range:",
+      #start = "1990-10-01",
+      #end = Sys.Date()
+    #)
+  
+  sliderInput("dateSlider",
+              "Dates:",
+              min = as.Date("1990-10-01","%Y-%m-%d"),
+              max = as.Date("2026-09-30","%Y-%m-%d"),
+              value=as.Date("1990-10-01"),
+              timeFormat="%Y-%m-%d")
     
     
   ),
@@ -57,16 +64,18 @@ sidebarLayout(
 )
 
 # Define server logic required to draw a histogram
+
+# to revert back to the dateRangeInput, replace dateSlider with date_range
 server <- function(input, output) {
   # reactive to get the data
   water_data <- reactive({
-    req(input$gauges, input$date_range, input$parameter) # inputs
+    req(input$gauges, input$dateSlider, input$parameter) # inputs
     
     # daily values retrieval
     read_waterdata_daily(
       monitoring_location_id = input$gauges,
       parameter_code = input$parameter,
-      time = c(input$date_range[1], input$date_range[2]),
+      time = c(input$dateSlider[1], input$dateSlider[2]),
     )
   })
   
