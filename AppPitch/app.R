@@ -76,6 +76,8 @@ sidebarLayout(
   # Main panel
   mainPanel(
     plotlyOutput("my_plot"),
+    
+    tableOutput("my_table")
     )
   )
 )
@@ -116,6 +118,7 @@ server <- function(input, output) {
       
     }
     
+    
     # aggregate data
     df %>%
       mutate(
@@ -149,6 +152,7 @@ server <- function(input, output) {
       )
     ) +
       geom_line(linewidth = 1) +
+      geom_smooth(method = "loess") +
       labs(
         x = "Date",
         y = parameter_labels[input$parameter],
@@ -158,6 +162,11 @@ server <- function(input, output) {
       theme_bw()
     
   })
+  
+  # Summary table
+  
+  output$parameter <- renderTable(count_top(selected(), diag), width = "100%",
+                                  caption = paste("Diagnosis"))
 }
 
 
