@@ -4,6 +4,9 @@ library(ggplot2)
 library(dataRetrieval)
 library(plotly)
 
+# read in the data
+all_dat <- readRDS("usgs_daily_data.rds")
+
 # Define UI 
 ui <- fluidPage(
 
@@ -40,14 +43,20 @@ sidebarLayout(
       )
     ),
    
+  current_year <- as.numeric(format(Sys.Date(), "%Y")), 
+    
   sliderInput("date_range",
               "Select water year range:",
               min = 1991,
-              max = 2026,
-              value=c(1991, 2026),
+              max = current_year, 
+              value=c(1991, current_year),
               step = 1,
               sep = ""
 ),
+
+
+  # loess checkbox
+  checkboxInput("show_smooth", "Add LOESS Smooth", value = FALSE),
 
   # aggregation checkbox
   checkboxInput(
@@ -75,9 +84,7 @@ sidebarLayout(
   
   # Main panel
   mainPanel(
-    plotlyOutput("my_plot"),
-    
-    tableOutput("my_table")
+    plotlyOutput("my_plot")
     )
   )
 )
@@ -97,12 +104,14 @@ server <- function(input, output) {
       paste0(input$date_range[2], "-09-30")
     )
     
-    # daily values retrieval
-    read_waterdata_daily(
-      monitoring_location_id = input$gauges,
-      parameter_code = input$parameter,
-      time = c(start_date, end_date),
-    )
+    # user selected data retrieval
+    all_dat %>%
+      filter(
+        monitoring_location_id %in% input$gauges,
+        parameter_code == input$parameter,
+        as.Date(time) >= start_date,
+        as.Date(time) <= end_date
+      )
   })
   
   # aggregate the data if requested
@@ -113,21 +122,22 @@ server <- function(input, output) {
     # no aggregation
     if (!input$use_aggregation) {
       
-      df$period <- df$time
-      return(df)
+      return(
+        df %>%
+          mutate(period = as.Date(time))
+      )
       
     }
     
-    
+  
     # aggregate data
     df %>%
       mutate(
-        period = floor_date(time, unit = input$aggregation)
+        period = floor_date(as.Date(time), unit = input$aggregation)
       ) %>%
       group_by(monitoring_location_id, period) %>%
       summarize(
-        value = mean(value, na.rm = TRUE),
-        .groups = "drop"
+        value = mean(value, na.rm = TRUE)
       )
     
   })  
@@ -138,12 +148,17 @@ server <- function(input, output) {
     "00065" = "Gauge Height (ft)"
   )
   
+  # conditionally show smooth
+  show_smooth <- reactive({
+    input$show_smooth
+  })
+  
   # Plot
   output$my_plot <- renderPlotly({
     
     df <- plot_data()
     
-    ggplot(
+    p <- ggplot(
       df,
       aes(
         x = period,
@@ -152,24 +167,29 @@ server <- function(input, output) {
       )
     ) +
       geom_line(linewidth = 1) +
-      geom_smooth(method = "loess") +
       labs(
         x = "Date",
         y = parameter_labels[input$parameter],
         color = "Gauge"
       ) +
       scale_color_viridis_d() +
-      theme_bw()
+      theme_bw() +
+      theme(legend.position = "bottom")
     
-  })
-  
-  # Summary table
-  
-  output$parameter <- renderTable(count_top(selected(), diag), width = "100%",
-                                  caption = paste("Diagnosis"))
+    # add loess smooth if selected
+    if (show_smooth()) {
+    p <- p +
+      geom_smooth(
+        method = "loess",
+        linewidth = 1
+      )
+    }
+    
+    ggplotly(p)
+    
+})
+    
 }
-
-
 
 # Run the application 
 shinyApp(ui = ui, server = server)
